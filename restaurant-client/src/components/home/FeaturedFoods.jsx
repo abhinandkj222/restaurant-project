@@ -78,7 +78,7 @@ const FeaturedFoods = () => {
                   <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-orange-50 transition duration-300 group-hover:scale-105 sm:h-36 sm:w-36 lg:h-40 lg:w-40">
                     {food.image_url ? (
                       <img
-                        src={`http://localhost:5000${food.image_url}`}
+                        src={`https://restaurant-project-otyw.onrender.com${food.image_url}`}
                         alt={food.name}
                         loading="lazy"
                         className="h-full w-full object-cover"

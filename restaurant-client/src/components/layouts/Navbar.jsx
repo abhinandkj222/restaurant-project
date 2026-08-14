@@ -44,16 +44,19 @@ const Navbar = () => {
 
       console.log('guest order tokens before login:', guestOrderTokens);
 
-      const response = await fetch('http://localhost:5000/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        'https://restaurant-project-otyw.onrender.com/api/auth/google',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            credential: credentialResponse.credential,
+            guestOrderTokens,
+          }),
         },
-        body: JSON.stringify({
-          credential: credentialResponse.credential,
-          guestOrderTokens,
-        }),
-      });
+      );
 
       const data = await response.json();
 
