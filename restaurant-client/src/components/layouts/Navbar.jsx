@@ -13,9 +13,9 @@ const Navbar = () => {
   const [user, setUser] = useState(null);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   const { cartItems } = useCart();
-  const navigate = useNavigate();
 
   const hideNavigation = ['/menu', '/cart', '/checkout'].includes(
     location.pathname,
@@ -27,7 +27,12 @@ const Navbar = () => {
     const storedUser = localStorage.getItem('user');
 
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (error) {
+        console.error('failed to parse stored user:', error);
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
@@ -45,7 +50,7 @@ const Navbar = () => {
       console.log('guest order tokens before login:', guestOrderTokens);
 
       const response = await fetch(
-        'https://restaurant-project-otyw.onrender.com/api/auth/google',
+        `${import.meta.env.VITE_API_URL}/api/auth/google`,
         {
           method: 'POST',
           headers: {
@@ -85,6 +90,89 @@ const Navbar = () => {
     navigate('/');
   };
 
+  // Handle section navigation
+  const handleSectionNavigation = (sectionId) => {
+    setIsOpen(false);
+
+    // Already on home page
+    if (location.pathname === '/') {
+      if (sectionId === 'home') {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+        return;
+      }
+
+      const section = document.getElementById(sectionId);
+
+      if (section) {
+        section.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+
+      return;
+    }
+
+    // Coming from another page
+    navigate('/');
+
+    // Wait for Home page to render
+    setTimeout(() => {
+      if (sectionId === 'home') {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth',
+        });
+        return;
+      }
+
+      const section = document.getElementById(sectionId);
+
+      if (section) {
+        section.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    }, 100);
+  };
+
+  // Handle navigation links
+  const handleNavLinkClick = (link) => {
+    const linkName = link.name.toLowerCase();
+
+    if (linkName === 'reservations') {
+      if (user) {
+        navigate('/orders');
+      } else {
+        setShowLogin(true);
+      }
+
+      setIsOpen(false);
+      return;
+    }
+
+    if (linkName === 'home') {
+      handleSectionNavigation('home');
+      return;
+    }
+
+    if (linkName === 'about') {
+      handleSectionNavigation('about');
+      return;
+    }
+
+    if (linkName === 'contact') {
+      handleSectionNavigation('contact');
+      return;
+    }
+
+    setIsOpen(false);
+  };
+
   return (
     <>
       {/* Navbar */}
@@ -113,16 +201,39 @@ const Navbar = () => {
             {/* Desktop Navigation */}
             {!hideNavigation && (
               <ul className="hidden items-center gap-6 lg:flex xl:gap-10">
-                {NAV_LINKS.map((link) => (
-                  <li key={link.name}>
-                    <Link
-                      to={link.path}
-                      className="whitespace-nowrap font-medium text-gray-700 transition hover:text-orange-500"
-                    >
-                      {link.name}
-                    </Link>
-                  </li>
-                ))}
+                {NAV_LINKS.map((link) => {
+                  const linkName = link.name.toLowerCase();
+
+                  if (
+                    linkName === 'home' ||
+                    linkName === 'about' ||
+                    linkName === 'contact' ||
+                    linkName === 'reservations'
+                  ) {
+                    return (
+                      <li key={link.name}>
+                        <button
+                          type="button"
+                          onClick={() => handleNavLinkClick(link)}
+                          className="whitespace-nowrap font-medium text-gray-700 transition hover:text-orange-500"
+                        >
+                          {link.name}
+                        </button>
+                      </li>
+                    );
+                  }
+
+                  return (
+                    <li key={link.name}>
+                      <Link
+                        to={link.path}
+                        className="whitespace-nowrap font-medium text-gray-700 transition hover:text-orange-500"
+                      >
+                        {link.name}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
@@ -147,6 +258,7 @@ const Navbar = () => {
               {user ? (
                 <div className="hidden lg:block">
                   <button
+                    type="button"
                     onClick={() => navigate('/orders')}
                     className="max-w-[140px] truncate font-semibold text-gray-700 transition hover:text-orange-500"
                   >
@@ -155,6 +267,7 @@ const Navbar = () => {
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={() => setShowLogin(true)}
                   className="hidden font-medium text-gray-700 transition hover:text-orange-500 lg:block"
                 >
@@ -164,6 +277,7 @@ const Navbar = () => {
 
               {/* Order Online */}
               <button
+                type="button"
                 onClick={() => navigate('/cart')}
                 className="hidden rounded-full bg-orange-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-orange-600 sm:px-5 lg:block"
               >
@@ -188,7 +302,9 @@ const Navbar = () => {
       {showLogin && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+            {/* Close */}
             <button
+              type="button"
               onClick={() => setShowLogin(false)}
               aria-label="Close login"
               className="absolute right-4 top-4 rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 sm:right-5 sm:top-5"
@@ -266,16 +382,40 @@ const Navbar = () => {
           {/* Navigation */}
           {!hideNavigation && (
             <div className="space-y-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.name}
-                  to={link.path}
-                  onClick={() => setIsOpen(false)}
-                  className="block rounded-xl px-4 py-3.5 text-base font-medium text-gray-700 transition hover:bg-orange-50 hover:text-orange-500"
-                >
-                  {link.name}
-                </Link>
-              ))}
+              {NAV_LINKS.map((link) => {
+                const linkName = link.name.toLowerCase();
+
+                if (
+                  linkName === 'home' ||
+                  linkName === 'about' ||
+                  linkName === 'contact' ||
+                  linkName === 'reservations'
+                ) {
+                  return (
+                    <div key={link.name}>
+                      <button
+                        type="button"
+                        onClick={() => handleNavLinkClick(link)}
+                        className="block w-full rounded-xl px-4 py-3.5 text-left text-base font-medium text-gray-700 transition hover:bg-orange-50 hover:text-orange-500"
+                      >
+                        {link.name}
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={link.name}>
+                    <Link
+                      to={link.path}
+                      onClick={() => setIsOpen(false)}
+                      className="block rounded-xl px-4 py-3.5 text-base font-medium text-gray-700 transition hover:bg-orange-50 hover:text-orange-500"
+                    >
+                      {link.name}
+                    </Link>
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -285,6 +425,7 @@ const Navbar = () => {
           {user ? (
             <>
               <button
+                type="button"
                 onClick={() => {
                   setIsOpen(false);
                   navigate('/orders');
@@ -295,6 +436,7 @@ const Navbar = () => {
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   setIsOpen(false);
                   handleLogout();
@@ -306,6 +448,7 @@ const Navbar = () => {
             </>
           ) : (
             <button
+              type="button"
               onClick={() => {
                 setIsOpen(false);
                 setShowLogin(true);
@@ -333,6 +476,7 @@ const Navbar = () => {
 
           {/* Mobile Order Button */}
           <button
+            type="button"
             onClick={() => {
               setIsOpen(false);
               navigate('/cart');

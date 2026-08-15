@@ -134,7 +134,29 @@ const getOrdersByUserId = async (userId) => {
       o.payment_status,
       o.total_amount,
       o.status,
-      o.created_at
+      o.created_at,
+
+      coalesce(
+        (
+          select json_agg(
+            json_build_object(
+              'id', oi.id,
+              'food_id', oi.food_id,
+              'quantity', oi.quantity,
+              'price', oi.price,
+              'name', f.name,
+              'image_url', f.image_url
+            )
+            order by oi.id
+          )
+          from order_items oi
+          left join foods f
+            on oi.food_id = f.id
+          where oi.order_id = o.id
+        ),
+        '[]'::json
+      ) as items
+
     from orders o
     where o.user_id = $1
     order by o.id desc

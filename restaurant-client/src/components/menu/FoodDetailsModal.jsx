@@ -31,7 +31,7 @@ const FoodDetailsModal = ({ food, isOpen, onClose }) => {
           {/* LEFT - IMAGE */}
           <div className="bg-[#FFF8F1] p-4 sm:p-6 lg:p-10">
             <img
-              src={`https://restaurant-project-otyw.onrender.com${food.image_url}`}
+              src={`${import.meta.env.VITE_API_URL}${food.image_url}`}
               alt={food.name}
               className="mx-auto h-56 w-full rounded-2xl object-cover shadow-lg sm:h-80 sm:rounded-3xl md:h-96 lg:h-[500px]"
             />

@@ -411,30 +411,26 @@ const Checkout = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setPaymentMethod('online');
-                      setError('');
+                      setError(
+                        'Online payment is coming soon. Please choose Cash on Delivery for now.',
+                      );
                     }}
-                    className={`rounded-2xl border-2 p-4 text-left transition sm:p-5 ${
-                      paymentMethod === 'online'
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-gray-200 bg-white hover:border-orange-300'
-                    }`}
+                    className="relative rounded-2xl border-2 border-gray-200 bg-gray-50 p-4 text-left transition hover:border-orange-300 sm:p-5"
                   >
-                    <CreditCard
-                      size={23}
-                      className={
-                        paymentMethod === 'online'
-                          ? 'text-orange-500'
-                          : 'text-gray-400'
-                      }
-                    />
+                    <div className="flex items-start justify-between gap-3">
+                      <CreditCard size={23} className="text-gray-400" />
+
+                      <span className="rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-600">
+                        Coming Soon
+                      </span>
+                    </div>
 
                     <h3 className="mt-3 font-bold text-gray-900 sm:mt-4">
                       Pay Online
                     </h3>
 
                     <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
-                      Complete payment online.
+                      Online payment is currently unavailable.
                     </p>
                   </button>
 

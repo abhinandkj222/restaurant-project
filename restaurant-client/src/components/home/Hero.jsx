@@ -1,7 +1,10 @@
 import Container from '../common/Container';
 import heroBurger from '../../assets/images/hero-burger.png';
+import { useNavigate } from 'react-router-dom';
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#FFF8F1] pt-20 sm:pt-24 lg:pt-28">
       {/* Background Glow */}
@@ -33,11 +36,19 @@ const Hero = () => {
 
             {/* Buttons */}
             <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:justify-center sm:gap-4 lg:justify-start">
-              <button className="w-full rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-7 py-3.5 font-semibold text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-orange-300 sm:w-auto sm:px-8 sm:py-4">
+              <button
+                type="button"
+                onClick={() => navigate('/cart')}
+                className="w-full rounded-full bg-gradient-to-r from-orange-500 to-orange-600 px-7 py-3.5 font-semibold text-white shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-orange-300 sm:w-auto sm:px-8 sm:py-4"
+              >
                 Order Now
               </button>
 
-              <button className="w-full rounded-full border-2 border-orange-500 px-7 py-3.5 font-semibold text-orange-500 transition-all duration-300 hover:bg-orange-500 hover:text-white sm:w-auto sm:px-8 sm:py-4">
+              <button
+                type="button"
+                onClick={() => navigate('/menu')}
+                className="w-full rounded-full border-2 border-orange-500 px-7 py-3.5 font-semibold text-orange-500 transition-all duration-300 hover:bg-orange-500 hover:text-white sm:w-auto sm:px-8 sm:py-4"
+              >
                 View Menu
               </button>
             </div>

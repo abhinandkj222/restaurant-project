@@ -1,4 +1,3 @@
-import Navbar from '../components/layouts/Navbar';
 import Hero from '../components/home/Hero';
 import Categories from '../components/home/Categories';
 import FeaturedFoods from '../components/home/FeaturedFoods';
@@ -8,20 +7,32 @@ import Testimonials from '../components/home/Testimonials';
 import DownloadApp from '../components/home/DownloadApp';
 import Newsletter from '../components/home/Newsletter';
 import Footer from '../components/layouts/Footer';
+import Contact from '../components/home/Contact';
 
 const Home = () => {
   return (
     <>
-      <Navbar />
-      <Hero />
+      <div id="home">
+        <Hero />
+      </div>
+
       <Categories />
+
       <FeaturedFoods />
-      <WhyChooseUs />
+
+      <div id="about" className="scroll-mt-24">
+        <WhyChooseUs />
+      </div>
+
       <SpecialOffer />
+
       <Testimonials />
+
       <DownloadApp />
+
       <Newsletter />
-      <Footer />
+
+      <Contact />
     </>
   );
 };

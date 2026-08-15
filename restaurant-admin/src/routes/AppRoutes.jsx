@@ -6,6 +6,8 @@ import FoodItems from '../pages/FoodItems';
 import Categories from '../pages/Categories';
 import Orders from '../pages/Orders';
 import Offers from '../pages/Offers';
+import Contacts from '../pages/Contacts';
+import Newsletter from '../pages/Newsletter';
 
 const AppRoutes = () => {
   return (
@@ -49,6 +51,22 @@ const AppRoutes = () => {
           element={
             <ProtectedRoute>
               <Offers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/contacts"
+          element={
+            <ProtectedRoute>
+              <Contacts />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/newsletter"
+          element={
+            <ProtectedRoute>
+              <Newsletter />
             </ProtectedRoute>
           }
         />

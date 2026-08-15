@@ -24,7 +24,7 @@ const FoodCard = ({ food, onClick }) => {
       {/* Image */}
       <div className="relative h-52 overflow-hidden bg-gray-100 sm:h-56 lg:h-64">
         <img
-          src={`https://restaurant-project-otyw.onrender.com${food.image_url}`}
+          src={`${import.meta.env.VITE_API_URL}${food.image_url}`}
           alt={food.name}
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
         />

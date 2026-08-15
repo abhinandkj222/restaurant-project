@@ -8,13 +8,15 @@ import OrderSuccess from '../pages/OrderSuccess';
 import Orders from '../pages/Orders';
 
 import Navbar from '../components/layouts/Navbar';
-
 import Footer from '../components/layouts/Footer';
+import ProtectedRoute from './ProtectedRoute';
+import ScrollToTop from '../components/common/ScrollToTop';
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Navbar />
+      <ScrollToTop />
 
       <Routes>
         <Route path="/" element={<Home />} />
@@ -22,8 +24,12 @@ const AppRoutes = () => {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/order-success" element={<OrderSuccess />} />
-        <Route path="/orders" element={<Orders />} />
+
+        <Route element={<ProtectedRoute />}>
+          <Route path="/orders" element={<Orders />} />
+        </Route>
       </Routes>
+
       <Footer />
     </BrowserRouter>
   );

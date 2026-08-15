@@ -101,7 +101,7 @@ const Cart = () => {
                   {/* Image */}
                   <div className="shrink-0">
                     <img
-                      src={`https://restaurant-project-otyw.onrender.com${item.image_url}`}
+                      src={`${import.meta.env.VITE_API_URL}${item.image_url}`}
                       alt={item.name}
                       className="h-20 w-20 rounded-xl object-cover sm:h-32 sm:w-32 sm:rounded-2xl lg:h-36 lg:w-36"
                     />

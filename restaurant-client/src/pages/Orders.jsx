@@ -14,12 +14,19 @@ import {
   Clock3,
   CheckCircle2,
   XCircle,
+  Star,
 } from 'lucide-react';
 import api from '../services/api';
 
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [ratingLoading, setRatingLoading] = useState(false);
+
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [review, setReview] = useState('');
 
   const navigate = useNavigate();
 
@@ -43,13 +50,48 @@ const Orders = () => {
 
         const data = response.data;
 
+        let myOrders = [];
+
         if (Array.isArray(data)) {
-          setOrders(data);
+          myOrders = data;
         } else if (Array.isArray(data.orders)) {
-          setOrders(data.orders);
-        } else {
-          setOrders([]);
+          myOrders = data.orders;
         }
+
+        /*
+         * Get the food items for every order.
+         *
+         * /orders/my-orders gives basic order information.
+         * /orders/:id gives the order items.
+         */
+        const ordersWithItems = await Promise.all(
+          myOrders.map(async (order) => {
+            try {
+              const orderResponse = await api.get(`/orders/${order.id}`, {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              });
+
+              return {
+                ...order,
+                items: orderResponse.data.order?.items || [],
+              };
+            } catch (error) {
+              console.error(
+                `failed to fetch items for order ${order.id}:`,
+                error,
+              );
+
+              return {
+                ...order,
+                items: [],
+              };
+            }
+          }),
+        );
+
+        setOrders(ordersWithItems);
       } catch (error) {
         console.error('failed to fetch orders:', error);
         setOrders([]);
@@ -122,6 +164,104 @@ const Orders = () => {
       month: 'short',
       year: 'numeric',
     });
+  };
+
+  // --------------------------------------------------
+  // Open rating modal
+  // --------------------------------------------------
+
+  const openRatingModal = (orderId, food) => {
+    setSelectedOrderId(orderId);
+    setSelectedFood(food);
+    setSelectedRating(0);
+    setReview('');
+  };
+
+  // --------------------------------------------------
+  // Close rating modal
+  // --------------------------------------------------
+
+  const closeRatingModal = () => {
+    if (ratingLoading) {
+      return;
+    }
+
+    setSelectedFood(null);
+    setSelectedOrderId(null);
+    setSelectedRating(0);
+    setReview('');
+  };
+
+  // --------------------------------------------------
+  // Submit rating
+  // --------------------------------------------------
+
+  const handleRating = async () => {
+    if (!selectedFood || !selectedOrderId) {
+      return;
+    }
+
+    if (!selectedRating) {
+      alert('Please select a rating');
+      return;
+    }
+
+    try {
+      setRatingLoading(true);
+
+      await api.post(
+        '/ratings',
+        {
+          orderId: selectedOrderId,
+          foodId: selectedFood.food_id,
+          rating: selectedRating,
+          review: review.trim() || null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      /*
+       * Mark this food as rated locally.
+       *
+       * This prevents the customer from seeing
+       * the "Rate Food" button again during this page session.
+       */
+      setOrders((previousOrders) =>
+        previousOrders.map((order) => {
+          if (order.id !== selectedOrderId) {
+            return order;
+          }
+
+          return {
+            ...order,
+            items: order.items.map((item) => {
+              if (item.food_id !== selectedFood.food_id) {
+                return item;
+              }
+
+              return {
+                ...item,
+                user_rating: selectedRating,
+              };
+            }),
+          };
+        }),
+      );
+
+      alert('Rating submitted successfully');
+
+      closeRatingModal();
+    } catch (error) {
+      console.error('rating error:', error);
+
+      alert(error.response?.data?.message || 'Failed to submit rating');
+    } finally {
+      setRatingLoading(false);
+    }
   };
 
   // --------------------------------------------------
@@ -331,8 +471,6 @@ const Orders = () => {
         ================================================== */}
 
         <div className="mt-6 overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-black/5 sm:mt-8">
-          {/* Order Header */}
-
           <div className="flex flex-col gap-4 border-b border-gray-100 p-5 sm:p-7 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
@@ -352,10 +490,6 @@ const Orders = () => {
               <ChevronRight size={17} />
             </Link>
           </div>
-
-          {/* ==================================================
-              NO ORDERS
-          ================================================== */}
 
           {orders.length === 0 ? (
             <div className="px-5 py-14 text-center sm:px-10 sm:py-16">
@@ -390,27 +524,27 @@ const Orders = () => {
                 <table className="w-full min-w-[1000px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50/70 text-left">
-                      <th className="whitespace-nowrap px-7 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-7 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Order
                       </th>
 
-                      <th className="whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Date
                       </th>
 
-                      <th className="whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Delivery
                       </th>
 
-                      <th className="whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Payment
                       </th>
 
-                      <th className="whitespace-nowrap px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Status
                       </th>
 
-                      <th className="whitespace-nowrap px-7 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      <th className="px-7 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Amount
                       </th>
                     </tr>
@@ -418,92 +552,166 @@ const Orders = () => {
 
                   <tbody>
                     {orders.map((order) => (
-                      <tr
-                        key={order.id}
-                        className="border-b border-gray-50 transition hover:bg-orange-50/30"
-                      >
-                        <td className="px-7 py-5">
-                          <p className="font-bold text-gray-900">#{order.id}</p>
+                      <>
+                        <tr
+                          key={order.id}
+                          className="border-b border-gray-50 transition hover:bg-orange-50/30"
+                        >
+                          <td className="px-7 py-5">
+                            <p className="font-bold text-gray-900">
+                              #{order.id}
+                            </p>
 
-                          <p className="mt-1 text-xs text-gray-400">
-                            Savory Restaurant
-                          </p>
-                        </td>
+                            <p className="mt-1 text-xs text-gray-400">
+                              Savory Restaurant
+                            </p>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-5">
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <CalendarDays size={16} className="text-gray-400" />
+                          <td className="whitespace-nowrap px-5 py-5">
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <CalendarDays
+                                size={16}
+                                className="text-gray-400"
+                              />
 
-                            {formatDate(order.created_at)}
-                          </div>
-                        </td>
-
-                        <td className="max-w-[250px] px-5 py-5">
-                          <div className="flex items-start gap-2">
-                            <MapPin
-                              size={16}
-                              className="mt-0.5 shrink-0 text-orange-500"
-                            />
-
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-gray-700">
-                                {order.delivery_city || 'Delivery'}
-                              </p>
-
-                              <p className="mt-1 truncate text-xs text-gray-400">
-                                {order.delivery_address ||
-                                  'Address not available'}
-                              </p>
+                              {formatDate(order.created_at)}
                             </div>
-                          </div>
-                        </td>
+                          </td>
 
-                        <td className="whitespace-nowrap px-5 py-5">
-                          <p className="text-sm font-medium capitalize text-gray-700">
-                            {order.payment_method || 'not specified'}
-                          </p>
+                          <td className="max-w-[250px] px-5 py-5">
+                            <div className="flex items-start gap-2">
+                              <MapPin
+                                size={16}
+                                className="mt-0.5 shrink-0 text-orange-500"
+                              />
 
-                          <p className="mt-1 text-xs capitalize text-gray-400">
-                            {order.payment_status || 'pending'}
-                          </p>
-                        </td>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-gray-700">
+                                  {order.delivery_city || 'Delivery'}
+                                </p>
 
-                        <td className="px-5 py-5">
-                          <span
-                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${getStatusStyle(
-                              order.status,
-                            )}`}
-                          >
-                            {order.status === 'delivered' && (
-                              <CheckCircle2 size={13} />
-                            )}
+                                <p className="mt-1 truncate text-xs text-gray-400">
+                                  {order.delivery_address ||
+                                    'Address not available'}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
 
-                            {order.status === 'cancelled' && (
-                              <XCircle size={13} />
-                            )}
+                          <td className="whitespace-nowrap px-5 py-5">
+                            <p className="text-sm font-medium capitalize text-gray-700">
+                              {order.payment_method || 'not specified'}
+                            </p>
 
-                            {order.status !== 'delivered' &&
-                              order.status !== 'cancelled' && (
-                                <Clock3 size={13} />
+                            <p className="mt-1 text-xs capitalize text-gray-400">
+                              {order.payment_status || 'pending'}
+                            </p>
+                          </td>
+
+                          <td className="px-5 py-5">
+                            <span
+                              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-semibold capitalize ${getStatusStyle(
+                                order.status,
+                              )}`}
+                            >
+                              {order.status === 'delivered' && (
+                                <CheckCircle2 size={13} />
                               )}
 
-                            {formatStatus(order.status)}
-                          </span>
-                        </td>
+                              {order.status === 'cancelled' && (
+                                <XCircle size={13} />
+                              )}
 
-                        <td className="whitespace-nowrap px-7 py-5 text-right">
-                          <p className="font-bold text-gray-900">
-                            ₹{Number(order.total_amount || 0).toFixed(2)}
-                          </p>
-                        </td>
-                      </tr>
+                              {order.status !== 'delivered' &&
+                                order.status !== 'cancelled' && (
+                                  <Clock3 size={13} />
+                                )}
+
+                              {formatStatus(order.status)}
+                            </span>
+                          </td>
+
+                          <td className="whitespace-nowrap px-7 py-5 text-right">
+                            <p className="font-bold text-gray-900">
+                              ₹{Number(order.total_amount || 0).toFixed(2)}
+                            </p>
+                          </td>
+                        </tr>
+
+                        {/* ==================================================
+                            DESKTOP ORDER ITEMS + RATING
+                        ================================================== */}
+
+                        {order.status === 'delivered' &&
+                          order.items?.length > 0 && (
+                            <tr
+                              key={`${order.id}-rating`}
+                              className="border-b border-gray-100 bg-orange-50/30"
+                            >
+                              <td colSpan="6" className="px-7 py-5">
+                                <div className="flex items-center justify-between gap-5">
+                                  <div>
+                                    <p className="text-sm font-bold text-gray-900">
+                                      Rate your food
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-gray-500">
+                                      Share your experience with the food you
+                                      ordered.
+                                    </p>
+                                  </div>
+
+                                  <div className="flex flex-wrap justify-end gap-3">
+                                    {order.items.map((item) => (
+                                      <div
+                                        key={item.id}
+                                        className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm ring-1 ring-black/5"
+                                      >
+                                        <div className="min-w-[140px]">
+                                          <p className="truncate text-sm font-semibold text-gray-800">
+                                            {item.name || 'Food item'}
+                                          </p>
+
+                                          <p className="mt-1 text-xs text-gray-400">
+                                            Quantity: {item.quantity}
+                                          </p>
+                                        </div>
+
+                                        {item.user_rating ? (
+                                          <div className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-3 py-2 text-sm font-semibold text-orange-500">
+                                            <Star
+                                              size={15}
+                                              fill="currentColor"
+                                            />
+                                            {item.user_rating}/5
+                                          </div>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openRatingModal(order.id, item)
+                                            }
+                                            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-orange-500 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-orange-600"
+                                          >
+                                            <Star size={14} />
+                                            Rate Food
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                      </>
                     ))}
                   </tbody>
                 </table>
               </div>
 
               {/* ==================================================
-                  MOBILE / TABLET CARDS
+                  MOBILE / TABLET
               ================================================== */}
 
               <div className="space-y-4 p-4 sm:p-5 lg:hidden">
@@ -512,8 +720,6 @@ const Orders = () => {
                     key={order.id}
                     className="rounded-2xl border border-gray-100 bg-white p-4 sm:p-5"
                   >
-                    {/* Top */}
-
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-xs text-gray-400">Order</p>
@@ -532,10 +738,8 @@ const Orders = () => {
                       </span>
                     </div>
 
-                    {/* Date + Amount */}
-
                     <div className="mt-5 grid grid-cols-2 gap-3 border-t border-gray-100 pt-5">
-                      <div className="min-w-0">
+                      <div>
                         <p className="text-xs text-gray-400">Date</p>
 
                         <p className="mt-1 text-sm font-medium text-gray-700">
@@ -543,7 +747,7 @@ const Orders = () => {
                         </p>
                       </div>
 
-                      <div className="min-w-0">
+                      <div>
                         <p className="text-xs text-gray-400">Amount</p>
 
                         <p className="mt-1 text-sm font-bold text-gray-900">
@@ -551,8 +755,6 @@ const Orders = () => {
                         </p>
                       </div>
                     </div>
-
-                    {/* Delivery */}
 
                     <div className="mt-5 rounded-2xl bg-orange-50/70 p-4">
                       <div className="flex items-start gap-2.5">
@@ -573,9 +775,11 @@ const Orders = () => {
                           {(order.delivery_city || order.delivery_pincode) && (
                             <p className="mt-1 break-words text-xs text-gray-500">
                               {order.delivery_city}
+
                               {order.delivery_city && order.delivery_pincode
                                 ? ', '
                                 : ''}
+
                               {order.delivery_pincode}
                             </p>
                           )}
@@ -583,21 +787,69 @@ const Orders = () => {
                       </div>
                     </div>
 
-                    {/* Payment */}
-
                     <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
-                      <div className="min-w-0">
+                      <div>
                         <p className="text-xs text-gray-400">Payment</p>
 
-                        <p className="mt-1 truncate text-sm font-medium capitalize text-gray-700">
+                        <p className="mt-1 text-sm font-medium capitalize text-gray-700">
                           {order.payment_method || 'not specified'}
                         </p>
                       </div>
 
-                      <span className="shrink-0 text-xs capitalize text-gray-400">
+                      <span className="text-xs capitalize text-gray-400">
                         {order.payment_status || 'pending'}
                       </span>
                     </div>
+
+                    {/* ==================================================
+                        ORDER ITEMS + RATING
+                    ================================================== */}
+
+                    {order.status === 'delivered' &&
+                      order.items?.length > 0 && (
+                        <div className="mt-5 border-t border-gray-100 pt-5">
+                          <p className="mb-3 text-sm font-bold text-gray-900">
+                            Rate your food
+                          </p>
+
+                          <div className="space-y-3">
+                            {order.items.map((item) => (
+                              <div
+                                key={item.id}
+                                className="flex items-center justify-between gap-3 rounded-2xl bg-gray-50 p-3"
+                              >
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-gray-800">
+                                    {item.name || 'Food item'}
+                                  </p>
+
+                                  <p className="mt-1 text-xs text-gray-400">
+                                    Quantity: {item.quantity}
+                                  </p>
+                                </div>
+
+                                {item.user_rating ? (
+                                  <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-orange-500">
+                                    <Star size={15} fill="currentColor" />
+                                    {item.user_rating}/5
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openRatingModal(order.id, item)
+                                    }
+                                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-orange-500 px-3 py-2 text-xs font-semibold text-white transition hover:bg-orange-600"
+                                  >
+                                    <Star size={14} />
+                                    Rate
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>
@@ -605,6 +857,87 @@ const Orders = () => {
           )}
         </div>
       </Container>
+
+      {/* ==================================================
+          RATING MODAL
+      ================================================== */}
+
+      {selectedFood && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-orange-50">
+                <Star
+                  size={28}
+                  className="text-orange-500"
+                  fill="currentColor"
+                />
+              </div>
+
+              <h2 className="mt-4 text-xl font-bold text-gray-900">
+                Rate {selectedFood.name || 'this food'}
+              </h2>
+
+              <p className="mt-1 text-sm text-gray-500">How was your food?</p>
+            </div>
+
+            {/* Stars */}
+
+            <div className="mt-6 flex justify-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setSelectedRating(star)}
+                  className="transition hover:scale-110"
+                >
+                  <Star
+                    size={32}
+                    className={
+                      star <= selectedRating
+                        ? 'text-orange-500'
+                        : 'text-gray-300'
+                    }
+                    fill={star <= selectedRating ? 'currentColor' : 'none'}
+                  />
+                </button>
+              ))}
+            </div>
+
+            {/* Review */}
+
+            <textarea
+              value={review}
+              onChange={(event) => setReview(event.target.value)}
+              placeholder="Write a review (optional)"
+              rows={4}
+              className="mt-6 w-full resize-none rounded-2xl border border-gray-200 px-4 py-3 text-sm outline-none transition focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+            />
+
+            {/* Buttons */}
+
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={closeRatingModal}
+                disabled={ratingLoading}
+                className="flex-1 rounded-full border border-gray-200 px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRating}
+                disabled={ratingLoading || !selectedRating}
+                className="flex-1 rounded-full bg-orange-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {ratingLoading ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

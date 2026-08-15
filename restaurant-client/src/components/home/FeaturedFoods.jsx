@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import Container from '../common/Container';
 import { Heart, ShoppingCart, Star } from 'lucide-react';
 import api from '../../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const FeaturedFoods = () => {
   const [popularFoods, setPopularFoods] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchPopularFoods = async () => {
@@ -78,7 +81,7 @@ const FeaturedFoods = () => {
                   <div className="flex h-32 w-32 items-center justify-center overflow-hidden rounded-full bg-orange-50 transition duration-300 group-hover:scale-105 sm:h-36 sm:w-36 lg:h-40 lg:w-40">
                     {food.image_url ? (
                       <img
-                        src={`https://restaurant-project-otyw.onrender.com${food.image_url}`}
+                        src={`${import.meta.env.VITE_API_URL}${food.image_url}`}
                         alt={food.name}
                         loading="lazy"
                         className="h-full w-full object-cover"
@@ -119,13 +122,14 @@ const FeaturedFoods = () => {
                     'Deliciously prepared with fresh ingredients by our expert chefs.'}
                 </p>
 
-                {/* Button */}
+                {/* Order Now */}
                 <button
                   type="button"
+                  onClick={() => navigate('/menu')}
                   className="mt-auto flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 py-3 text-sm font-semibold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:mt-6 sm:py-3.5 sm:text-base"
                 >
                   <ShoppingCart size={17} className="sm:h-[18px] sm:w-[18px]" />
-                  Add to Cart
+                  Order Now
                 </button>
               </div>
             ))}

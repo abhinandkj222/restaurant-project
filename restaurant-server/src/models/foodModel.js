@@ -44,7 +44,8 @@ const getFoods = async () => {
 
 const getPopularFoods = async () => {
   return db.any(
-    `select
+    `
+    select
       f.id,
       f.name,
       f.description,
@@ -53,25 +54,41 @@ const getPopularFoods = async () => {
       f.is_available,
       f.category_id,
       c.name as category,
-      coalesce(round(avg(fr.rating), 1), 0) as rating,
-      count(fr.id) as rating_count,
-      sum(oi.quantity) as total_sold
+      coalesce(r.rating, 0) as rating,
+      coalesce(r.rating_count, 0) as rating_count,
+      s.total_sold
     from foods f
-    join order_items oi
-      on f.id = oi.food_id
-    join orders o
-      on oi.order_id = o.id
+
+    join (
+      select
+        oi.food_id,
+        sum(oi.quantity) as total_sold
+      from order_items oi
+      join orders o
+        on oi.order_id = o.id
+      where o.status != 'cancelled'
+      group by oi.food_id
+    ) s
+      on f.id = s.food_id
+
+    left join (
+      select
+        fr.food_id,
+        round(avg(fr.rating), 1) as rating,
+        count(fr.id) as rating_count
+      from food_ratings fr
+      group by fr.food_id
+    ) r
+      on f.id = r.food_id
+
     left join categories c
       on f.category_id = c.id
-    left join food_ratings fr
-      on f.id = fr.food_id
-    where o.status != 'cancelled'
-      and f.is_available = true
-    group by
-      f.id,
-      c.name
-    order by total_sold desc
-    limit 4`,
+
+    where f.is_available = true
+
+    order by s.total_sold desc
+    limit 4
+    `,
   );
 };
 

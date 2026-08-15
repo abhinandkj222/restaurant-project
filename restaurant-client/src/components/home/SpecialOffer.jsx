@@ -93,7 +93,7 @@ const SpecialOffer = () => {
           <div className="flex justify-center">
             {offer.image_url ? (
               <img
-                src={`https://restaurant-project-otyw.onrender.com${offer.image_url}`}
+                src={`${import.meta.env.VITE_API_URL}${offer.image_url}`}
                 alt={offer.title}
                 className="h-80 w-80 rounded-full object-cover shadow-2xl"
               />

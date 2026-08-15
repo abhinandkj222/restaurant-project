@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Megaphone,
   LogOut,
+  Mail,
 } from 'lucide-react';
 
 import { Link, useNavigate } from 'react-router-dom';
@@ -71,6 +72,20 @@ const AdminLayout = ({ children }) => {
           >
             <Megaphone size={20} />
             Offers
+          </Link>
+          <Link
+            to="/contacts"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 font-medium text-gray-600 transition hover:bg-orange-50 hover:text-orange-500"
+          >
+            <Mail size={20} />
+            Contacts
+          </Link>
+          <Link
+            to="/newsletter"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 font-medium text-gray-600 transition hover:bg-orange-50 hover:text-orange-500"
+          >
+            <Mail size={20} />
+            Newsletter
           </Link>
         </nav>
 
