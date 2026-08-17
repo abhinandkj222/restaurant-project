@@ -10,7 +10,7 @@ const db = pgp({
     rejectUnauthorized: false,
   },
 });
-
+=
 module.exports = db;
 
 // const pgp = require('pg-promise')();
