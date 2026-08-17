@@ -4,12 +4,7 @@ import toast from 'react-hot-toast';
 
 import api from '../../services/api';
 
-const AddFoodModal = ({
-  isOpen,
-  onClose,
-  onFoodAdded,
-  editingFood,
-}) => {
+const AddFoodModal = ({ isOpen, onClose, onFoodAdded, editingFood }) => {
   const [categories, setCategories] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -59,7 +54,7 @@ const AddFoodModal = ({
 
       setPreview(
         editingFood.image_url
-          ? `http://localhost:5000${editingFood.image_url}`
+          ? `${import.meta.env.VITE_API_URL}${editingFood.image_url}`
           : null,
       );
 
@@ -119,15 +114,11 @@ const AddFoodModal = ({
       }
 
       if (isEditing) {
-        await api.put(
-          `/admin/foods/${editingFood.id}`,
-          data,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
+        await api.put(`/admin/foods/${editingFood.id}`, data, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
           },
-        );
+        });
       } else {
         await api.post('/admin/foods', data, {
           headers: {
@@ -138,21 +129,19 @@ const AddFoodModal = ({
 
       onFoodAdded();
 
-toast.success(
-  isEditing
-    ? 'Food updated successfully'
-    : 'Food added successfully',
-);
+      toast.success(
+        isEditing ? 'Food updated successfully' : 'Food added successfully',
+      );
 
-handleClose();
+      handleClose();
     } catch (error) {
       const message =
-  error.response?.data?.message ||
-  `Failed to ${isEditing ? 'update' : 'add'} food`;
+        error.response?.data?.message ||
+        `Failed to ${isEditing ? 'update' : 'add'} food`;
 
-setError(message);
+      setError(message);
 
-toast.error(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -228,10 +217,7 @@ toast.error(message);
                 </div>
               ) : (
                 <div className="flex h-48 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 transition hover:border-orange-400 hover:bg-orange-50">
-                  <ImagePlus
-                    size={36}
-                    className="text-orange-500"
-                  />
+                  <ImagePlus size={36} className="text-orange-500" />
 
                   <p className="mt-3 font-semibold text-gray-700">
                     Upload food image
@@ -293,10 +279,7 @@ toast.error(message);
                 <option value="">Select category</option>
 
                 {categories.map((category) => (
-                  <option
-                    key={category.id}
-                    value={category.id}
-                  >
+                  <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))}

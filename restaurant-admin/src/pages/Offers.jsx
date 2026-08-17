@@ -306,7 +306,7 @@ const Offers = () => {
                   <div className="relative flex h-56 items-center justify-center bg-gradient-to-r from-orange-500 to-orange-600">
                     {offer.image_url ? (
                       <img
-                        src={`http://localhost:5000${offer.image_url}`}
+                        src={`${import.meta.env.VITE_API_URL}${offer.image_url}`}
                         alt={offer.title}
                         className="h-full w-full object-cover"
                       />

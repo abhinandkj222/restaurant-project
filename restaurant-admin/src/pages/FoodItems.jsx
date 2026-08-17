@@ -6,7 +6,6 @@ import AdminLayout from '../components/layout/AdminLayout';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-
 const FoodItems = () => {
   const [foods, setFoods] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,29 +25,26 @@ const FoodItems = () => {
   };
 
   const handleDelete = async (id) => {
-  const confirmed = window.confirm(
-    'Are you sure you want to delete this food?',
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
-  try {
-    await api.delete(`/admin/foods/${id}`);
-
-    await fetchFoods();
-
-    toast.success('Food deleted successfully');
-  } catch (error) {
-    console.error('delete food error:', error);
-
-    toast.error(
-      error.response?.data?.message ||
-        'Failed to delete food',
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this food?',
     );
-  }
-};
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await api.delete(`/admin/foods/${id}`);
+
+      await fetchFoods();
+
+      toast.success('Food deleted successfully');
+    } catch (error) {
+      console.error('delete food error:', error);
+
+      toast.error(error.response?.data?.message || 'Failed to delete food');
+    }
+  };
 
   useEffect(() => {
     fetchFoods();
@@ -74,12 +70,12 @@ const FoodItems = () => {
           </div>
 
           <button
-  onClick={() => setShowAddFood(true)}
-  className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-lg shadow-orange-100 transition hover:bg-orange-600"
->
-  <Plus size={20} />
-  Add Food
-</button>
+            onClick={() => setShowAddFood(true)}
+            className="flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 font-semibold text-white shadow-lg shadow-orange-100 transition hover:bg-orange-600"
+          >
+            <Plus size={20} />
+            Add Food
+          </button>
         </div>
 
         {/* Food table */}
@@ -140,10 +136,10 @@ const FoodItems = () => {
                           <div className="h-14 w-14 overflow-hidden rounded-xl bg-orange-50">
                             {food.image_url ? (
                               <img
-  src={`http://localhost:5000${food.image_url}`}
-  alt={food.name}
-  className="h-full w-full object-cover"
-/>
+                                src={`${import.meta.env.VITE_API_URL}${food.image_url}`}
+                                alt={food.name}
+                                className="h-full w-full object-cover"
+                              />
                             ) : (
                               <div className="flex h-full w-full items-center justify-center text-orange-500">
                                 <UtensilsCrossed size={22} />
@@ -188,21 +184,21 @@ const FoodItems = () => {
                       <td className="px-6 py-5">
                         <div className="flex justify-end gap-2">
                           <button
-  onClick={() => {
-    setEditingFood(food);
-    setShowAddFood(true);
-  }}
-  className="rounded-lg p-2 text-gray-500 transition hover:bg-orange-50 hover:text-orange-500"
->
-  <Pencil size={18} />
-</button>
+                            onClick={() => {
+                              setEditingFood(food);
+                              setShowAddFood(true);
+                            }}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-orange-50 hover:text-orange-500"
+                          >
+                            <Pencil size={18} />
+                          </button>
 
                           <button
-  onClick={() => handleDelete(food.id)}
-  className="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-500"
->
-  <Trash2 size={18} />
-</button>
+                            onClick={() => handleDelete(food.id)}
+                            className="rounded-lg p-2 text-gray-500 transition hover:bg-red-50 hover:text-red-500"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -214,14 +210,14 @@ const FoodItems = () => {
         </div>
       </div>
       <AddFoodModal
-  isOpen={showAddFood}
-  onClose={() => {
-    setShowAddFood(false);
-    setEditingFood(null);
-  }}
-  onFoodAdded={fetchFoods}
-  editingFood={editingFood}
-/>
+        isOpen={showAddFood}
+        onClose={() => {
+          setShowAddFood(false);
+          setEditingFood(null);
+        }}
+        onFoodAdded={fetchFoods}
+        editingFood={editingFood}
+      />
     </AdminLayout>
   );
 };
