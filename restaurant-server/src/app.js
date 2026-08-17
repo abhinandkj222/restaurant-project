@@ -11,6 +11,7 @@ const authRoutes = require('./routes/authRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const ratingRoutes = require('./routes/ratingRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 const app = express();
 
 app.use(cors());
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/chat', chatRoutes);
 
 app.use('/api/orders', orderRoutes);
 

@@ -8,7 +8,7 @@ import DownloadApp from '../components/home/DownloadApp';
 import Newsletter from '../components/home/Newsletter';
 import Footer from '../components/layouts/Footer';
 import Contact from '../components/home/Contact';
-
+import AIChatbot from '../components/chatbot/AIChatbot';
 const Home = () => {
   return (
     <>
@@ -33,6 +33,7 @@ const Home = () => {
       <Newsletter />
 
       <Contact />
+      <AIChatbot />
     </>
   );
 };
