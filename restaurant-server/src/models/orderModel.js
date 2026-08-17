@@ -135,6 +135,9 @@ const getOrdersByUserId = async (userId) => {
       o.total_amount,
       o.status,
       o.created_at,
+      (o.bill_pdf is not null) as has_bill,
+      o.bill_pdf_name,
+      o.bill_uploaded_at,
 
       coalesce(
         (
@@ -164,7 +167,6 @@ const getOrdersByUserId = async (userId) => {
     [userId],
   );
 };
-
 const getOrderById = async (orderId, userId) => {
   const order = await db.oneOrNone(
     `
@@ -245,7 +247,10 @@ const getAllOrders = async () => {
       o.payment_status,
       o.total_amount,
       o.status,
-      o.created_at
+      o.created_at,
+      (o.bill_pdf is not null) as has_bill,
+      o.bill_pdf_name,
+      o.bill_uploaded_at
     from orders o
     order by o.id desc
     `,
@@ -269,7 +274,10 @@ const getAdminOrderById = async (orderId) => {
       o.payment_status,
       o.total_amount,
       o.status,
-      o.created_at
+      o.created_at,
+      (o.bill_pdf is not null) as has_bill,
+      o.bill_pdf_name,
+      o.bill_uploaded_at
     from orders o
     where o.id = $1
     `,
@@ -303,6 +311,40 @@ const getAdminOrderById = async (orderId) => {
   };
 };
 
+const uploadBill = async (orderId, fileName, fileData) => {
+  return db.oneOrNone(
+    `
+    update orders
+    set
+      bill_pdf_name = $1,
+      bill_pdf = $2,
+      bill_uploaded_at = now()
+    where id = $3
+    returning
+      id,
+      bill_pdf_name,
+      bill_uploaded_at
+    `,
+    [fileName, fileData, orderId],
+  );
+};
+
+const getBill = async (orderId, userId) => {
+  return db.oneOrNone(
+    `
+    select
+      id,
+      bill_pdf,
+      bill_pdf_name
+    from orders
+    where id = $1
+      and user_id = $2
+      and bill_pdf is not null
+    `,
+    [orderId, userId],
+  );
+};
+
 const updateOrderStatus = async (orderId, status) => {
   return db.oneOrNone(
     `
@@ -328,6 +370,76 @@ const updateOrderStatus = async (orderId, status) => {
   );
 };
 
+const updatePaymentStatus = async (orderId, paymentStatus) => {
+  return db.oneOrNone(
+    `
+    update orders
+    set payment_status = $1
+    where id = $2
+    returning
+      id,
+      user_id,
+      customer_name,
+      customer_phone,
+      customer_email,
+      delivery_address,
+      delivery_city,
+      delivery_pincode,
+      payment_method,
+      payment_status,
+      total_amount,
+      status,
+      created_at
+    `,
+    [paymentStatus, orderId],
+  );
+};
+
+const getAllOrdersForPdf = async (orderIds) => {
+  return db.any(
+    `
+    select
+      o.id,
+      o.customer_name,
+      o.customer_phone,
+      o.customer_email,
+      o.delivery_address,
+      o.delivery_city,
+      o.delivery_pincode,
+      o.payment_method,
+      o.payment_status,
+      o.total_amount,
+      o.status,
+      o.created_at,
+
+      coalesce(
+        (
+          select json_agg(
+            json_build_object(
+              'id', oi.id,
+              'food_id', oi.food_id,
+              'quantity', oi.quantity,
+              'price', oi.price,
+              'name', f.name
+            )
+            order by oi.id
+          )
+          from order_items oi
+          left join foods f
+            on oi.food_id = f.id
+          where oi.order_id = o.id
+        ),
+        '[]'::json
+      ) as items
+
+    from orders o
+    where o.id = any($1::int[])
+    order by o.id desc
+    `,
+    [orderIds],
+  );
+};
+
 module.exports = {
   createOrder,
   getOrders,
@@ -337,4 +449,8 @@ module.exports = {
   getAllOrders,
   getAdminOrderById,
   updateOrderStatus,
+  updatePaymentStatus,
+  getAllOrdersForPdf,
+  uploadBill,
+  getBill,
 };

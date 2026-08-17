@@ -6,6 +6,7 @@ const {
   getMyOrders,
   getOrderById,
   attachGuestOrders,
+  getBill,
 } = require('../controllers/orderController');
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -22,5 +23,6 @@ router.get('/my-orders', authMiddleware, getMyOrders);
 router.post('/attach-guest-orders', authMiddleware, attachGuestOrders);
 
 router.get('/:id', authMiddleware, getOrderById);
+router.get('/:id/bill', authMiddleware, getBill);
 
 module.exports = router;

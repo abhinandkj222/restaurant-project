@@ -12,6 +12,9 @@ import {
   Phone,
   Mail,
   X,
+  Printer,
+  Upload,
+  FileText,
 } from 'lucide-react';
 
 import AdminLayout from '../components/layout/AdminLayout';
@@ -21,11 +24,19 @@ const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingOrder, setUpdatingOrder] = useState(null);
+  const [updatingPayment, setUpdatingPayment] = useState(null);
   const [error, setError] = useState('');
 
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [uploadingBill, setUploadingBill] = useState(false);
+
+  // --------------------------------------------------
+  // Selected orders for printing
+  // --------------------------------------------------
+
+  const [selectedOrderIds, setSelectedOrderIds] = useState([]);
 
   // --------------------------------------------------
   // Fetch orders
@@ -44,6 +55,110 @@ const Orders = () => {
       setError('Failed to load orders.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // --------------------------------------------------
+  // Select / unselect order
+  // --------------------------------------------------
+
+  const toggleOrderSelection = (orderId) => {
+    setSelectedOrderIds((currentIds) => {
+      if (currentIds.includes(orderId)) {
+        return currentIds.filter((id) => id !== orderId);
+      }
+
+      return [...currentIds, orderId];
+    });
+  };
+
+  // --------------------------------------------------
+  // Select / unselect all orders
+  // --------------------------------------------------
+
+  const toggleSelectAll = () => {
+    if (selectedOrderIds.length === orders.length) {
+      setSelectedOrderIds([]);
+      return;
+    }
+
+    setSelectedOrderIds(orders.map((order) => order.id));
+  };
+
+  // --------------------------------------------------
+  // Print selected orders
+  // --------------------------------------------------
+
+  const printSelectedOrders = async () => {
+    if (selectedOrderIds.length === 0) {
+      setError('Please select at least one order to print.');
+      return;
+    }
+
+    try {
+      setError('');
+
+      const ids = selectedOrderIds.join(',');
+
+      const response = await api.get(`/admin/orders/print?ids=${ids}`, {
+        responseType: 'blob',
+      });
+
+      const pdfBlob = new Blob([response.data], {
+        type: 'application/pdf',
+      });
+
+      const pdfUrl = window.URL.createObjectURL(pdfBlob);
+
+      window.open(pdfUrl, '_blank');
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(pdfUrl);
+      }, 60000);
+    } catch (error) {
+      console.error('failed to print orders:', error);
+
+      setError('Failed to generate orders PDF.');
+    }
+  };
+
+  const uploadBill = async (orderId, file) => {
+    if (!file) {
+      return;
+    }
+
+    if (file.type !== 'application/pdf') {
+      setError('Only PDF files are allowed.');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('PDF file must be smaller than 10 MB.');
+      return;
+    }
+
+    try {
+      setUploadingBill(true);
+      setError('');
+
+      const formData = new FormData();
+
+      formData.append('bill', file);
+
+      await api.post(`/admin/orders/${orderId}/bill`, formData);
+
+      const response = await api.get(`/admin/orders/${orderId}`);
+
+      setSelectedOrder(response.data.order);
+      setSelectedOrderItems(response.data.order.items || []);
+
+      await fetchOrders();
+    } catch (error) {
+      console.error('failed to upload bill:', error);
+
+      setError(error.response?.data?.message || 'Failed to upload PDF bill.');
+    } finally {
+      setUploadingBill(false);
     }
   };
 
@@ -102,6 +217,36 @@ const Orders = () => {
       );
     } finally {
       setUpdatingOrder(null);
+    }
+  };
+
+  // --------------------------------------------------
+  // Update payment status
+  // --------------------------------------------------
+
+  const updatePaymentStatus = async (orderId, paymentStatus) => {
+    try {
+      setUpdatingPayment(orderId);
+      setError('');
+
+      await api.patch(`/admin/orders/${orderId}/payment-status`, {
+        paymentStatus,
+      });
+
+      await fetchOrders();
+
+      const response = await api.get(`/admin/orders/${orderId}`);
+
+      setSelectedOrder(response.data.order);
+      setSelectedOrderItems(response.data.order.items || []);
+    } catch (error) {
+      console.error('failed to update payment status:', error);
+
+      setError(
+        error.response?.data?.message || 'Failed to update payment status.',
+      );
+    } finally {
+      setUpdatingPayment(null);
     }
   };
 
@@ -250,14 +395,33 @@ const Orders = () => {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={fetchOrders}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 font-medium text-gray-700 shadow-sm transition hover:border-orange-300 hover:text-orange-500"
-            >
-              <RefreshCw size={18} />
-              Refresh
-            </button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={printSelectedOrders}
+                disabled={selectedOrderIds.length === 0}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold shadow-sm transition ${
+                  selectedOrderIds.length > 0
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'cursor-not-allowed bg-gray-200 text-gray-400'
+                }`}
+              >
+                <Printer size={18} />
+
+                {selectedOrderIds.length > 0
+                  ? `Print Selected Orders (${selectedOrderIds.length})`
+                  : 'Print Selected Orders'}
+              </button>
+
+              <button
+                type="button"
+                onClick={fetchOrders}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 font-medium text-gray-700 shadow-sm transition hover:border-orange-300 hover:text-orange-500"
+              >
+                <RefreshCw size={18} />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Error */}
@@ -287,9 +451,23 @@ const Orders = () => {
           ) : (
             <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
+                <table className="w-full min-w-[1000px]">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
+                      {/* Select */}
+
+                      <th className="w-16 px-6 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={
+                            orders.length > 0 &&
+                            selectedOrderIds.length === orders.length
+                          }
+                          onChange={toggleSelectAll}
+                          className="h-4 w-4 cursor-pointer accent-orange-500"
+                        />
+                      </th>
+
                       <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Order
                       </th>
@@ -310,6 +488,10 @@ const Orders = () => {
                         Status
                       </th>
 
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        Bill
+                      </th>
+
                       <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-400">
                         Total
                       </th>
@@ -323,6 +505,20 @@ const Orders = () => {
                         onClick={() => openOrder(order)}
                         className="cursor-pointer border-b border-gray-100 transition hover:bg-orange-50/40"
                       >
+                        {/* Select */}
+
+                        <td
+                          className="px-6 py-5 text-center"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedOrderIds.includes(order.id)}
+                            onChange={() => toggleOrderSelection(order.id)}
+                            className="h-4 w-4 cursor-pointer accent-orange-500"
+                          />
+                        </td>
+
                         {/* Order */}
 
                         <td className="px-6 py-5">
@@ -402,6 +598,59 @@ const Orders = () => {
                           >
                             {formatStatus(order.status)}
                           </span>
+                        </td>
+                        {/* Bill */}
+
+                        {/* Bill */}
+
+                        <td
+                          className="px-6 py-5"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {order.payment_status === 'paid' ? (
+                            <label
+                              className={`inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                                uploadingBill
+                                  ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+                                  : order.has_bill
+                                    ? 'cursor-pointer bg-green-50 text-green-600 hover:bg-green-100'
+                                    : 'cursor-pointer bg-orange-50 text-orange-500 hover:bg-orange-100'
+                              }`}
+                            >
+                              {order.has_bill ? (
+                                <>
+                                  <FileText size={16} />
+                                  Uploaded
+                                </>
+                              ) : (
+                                <>
+                                  <Upload size={16} />
+                                  Upload PDF
+                                </>
+                              )}
+
+                              <input
+                                type="file"
+                                accept="application/pdf,.pdf"
+                                className="hidden"
+                                disabled={uploadingBill}
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+
+                                  if (file) {
+                                    uploadBill(order.id, file);
+                                  }
+
+                                  event.target.value = '';
+                                }}
+                              />
+                            </label>
+                          ) : (
+                            <span className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl bg-gray-100 px-3 py-2 text-sm font-semibold text-gray-400">
+                              <Upload size={16} />
+                              Payment Pending
+                            </span>
+                          )}
                         </td>
 
                         {/* Total */}
@@ -616,10 +865,77 @@ const Orders = () => {
                 )}
               </div>
 
+              {/* Bill */}
+
+              <div className="mt-5 rounded-2xl border border-gray-100 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-50 text-orange-500">
+                      <FileText size={19} />
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                        Product Bill
+                      </p>
+
+                      <p className="mt-1 font-semibold text-gray-900">
+                        {selectedOrder.bill_pdf_name || 'No bill uploaded'}
+                      </p>
+
+                      {selectedOrder.bill_uploaded_at && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          Uploaded{' '}
+                          {formatDateTime(selectedOrder.bill_uploaded_at)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <label
+                    className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold transition ${
+                      uploadingBill
+                        ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+                        : 'bg-orange-500 text-white hover:bg-orange-600'
+                    }`}
+                  >
+                    {uploadingBill ? (
+                      <>
+                        <RefreshCw size={17} className="animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={17} />
+                        {selectedOrder.bill_pdf_name
+                          ? 'Replace PDF'
+                          : 'Upload PDF'}
+                      </>
+                    )}
+
+                    <input
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      className="hidden"
+                      disabled={uploadingBill}
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+
+                        if (file) {
+                          uploadBill(selectedOrder.id, file);
+                        }
+
+                        event.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               {/* Payment */}
 
               <div className="mt-5 rounded-2xl border border-gray-100 p-5">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-50">
                       <CreditCard size={19} className="text-gray-500" />
@@ -636,16 +952,59 @@ const Orders = () => {
                     </div>
                   </div>
 
-                  <span
-                    className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${getPaymentStyle(
-                      selectedOrder.payment_status,
-                    )}`}
-                  >
-                    {formatStatus(selectedOrder.payment_status)}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Payment Status */}
+
+                    <span
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${getPaymentStyle(
+                        selectedOrder.payment_status,
+                      )}`}
+                    >
+                      {formatStatus(selectedOrder.payment_status)}
+                    </span>
+
+                    {/* Mark Cash Payment as Paid */}
+
+                    {selectedOrder.payment_method === 'cash' &&
+                      selectedOrder.payment_status === 'pending' && (
+                        <button
+                          type="button"
+                          disabled={updatingPayment === selectedOrder.id}
+                          onClick={() =>
+                            updatePaymentStatus(selectedOrder.id, 'paid')
+                          }
+                          className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
+                            updatingPayment === selectedOrder.id
+                              ? 'cursor-not-allowed bg-gray-200 text-gray-400'
+                              : 'bg-green-500 text-white hover:bg-green-600'
+                          }`}
+                        >
+                          {updatingPayment === selectedOrder.id ? (
+                            <>
+                              <RefreshCw size={16} className="animate-spin" />
+                              Updating...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle size={16} />
+                              Mark as Paid
+                            </>
+                          )}
+                        </button>
+                      )}
+
+                    {/* Cash payment already received */}
+
+                    {selectedOrder.payment_method === 'cash' &&
+                      selectedOrder.payment_status === 'paid' && (
+                        <span className="inline-flex items-center gap-2 rounded-xl bg-green-50 px-4 py-2.5 text-sm font-semibold text-green-600">
+                          <CheckCircle size={16} />
+                          Payment Received
+                        </span>
+                      )}
+                  </div>
                 </div>
               </div>
-
               {/* Order Total */}
 
               <div className="mt-5 rounded-2xl border border-gray-100 p-5">
